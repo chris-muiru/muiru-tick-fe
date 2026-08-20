@@ -21,7 +21,7 @@ pipeline {
         stage('Pull Source') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'muiru-secret', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
-                    git url: "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/chris-muiru/muiru-tick-ui.git", branch: 'main'
+                    git url: "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/chris-muiru/muiru-tick-fe.git", branch: 'main'
                 }
             }
         }
