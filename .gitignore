@@ -1,6 +1,11 @@
 node_modules/
+dist/
 .output/
 .vinxi/
+*.log
+# .env.prod is tracked, matching new-ui-muiru-ecomm and watch-ui: everything
+# Vite inlines ends up readable in the browser bundle anyway. Only genuinely
+# local overrides are ignored.
 .env
-.env.prod
-logs/
+.env*.local
+.DS_Store
