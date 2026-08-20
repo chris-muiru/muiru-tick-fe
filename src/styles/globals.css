@@ -14,81 +14,77 @@
 }
 
 /*
-  Brass and ink.
+  Cool dark, cyan accent — the register this category actually reads in.
 
-  muiru-watch is a cool blue-grey room with an indigo accent. tick is the
-  opposite temperature on purpose: a warm charcoal room — near-black with a
-  trace of amber in it, the colour of an unlit instrument panel — with brass as
-  the interactive colour. Two products by the same hand, not the same product
-  twice.
-
-  The one cool colour in the system is `now`, an electric cyan, and it is used
-  for exactly one thing: the present moment on the timeline. Against a warm
-  ground it is impossible to miss and impossible to confuse with anything else.
+  What keeps this from being muiru-watch is not the ground, which is
+  conventionally cool in every tool of this kind, but the accent and the
+  structure. watch is indigo; tick is cyan, far enough round the wheel to be
+  unmistakable side by side. The rail, the wall clock and the timeline do the
+  rest of the work.
 
   Neither theme uses pure black or pure white. Pure black kills elevation; pure
-  white glares next to saturated status colour.
+  white glares next to saturated status colour. Corners sit at 3px rather than
+  watch's 6px, so panels read as instrument faces.
 
   Status semantics, and why each hue:
     ok       emerald   the run did what it was asked
     fail     rose      the customer's endpoint said no
-    late     violet    *we* were the problem — deliberately not a warm hue, so
-                       it never blurs into brass
+    late     violet    *we* were the problem — its own hue, never blended into
+                       failure, because it is a different kind of fault
     skipped  slate     nothing happened, and that was correct
-    now      cyan      the present, and nothing else ever
+    now      amber     the present moment on the timeline, and nothing else.
+                       Warm against a cool ground, so the eye finds it first.
 */
 @layer base {
   :root {
-    /* Warm paper rather than blue-white. */
-    --surface-0: 40 24% 97%;
-    --surface-1: 40 30% 99%;
-    --surface-2: 38 20% 93%;
+    --surface-0: 210 20% 98%;
+    --surface-1: 0 0% 100%;
+    --surface-2: 213 18% 95%;
 
-    --text-primary: 30 18% 12%;
-    --text-secondary: 32 8% 36%;
-    --text-muted: 32 7% 48%;
+    --text-primary: 215 30% 12%;
+    --text-secondary: 214 10% 37%;
+    --text-muted: 214 9% 49%;
 
-    --border: 36 16% 86%;
-    --border-strong: 34 14% 74%;
+    --border: 214 16% 88%;
+    --border-strong: 214 14% 77%;
 
-    /* Brass. Darkened in light mode so text on it still clears AA. */
-    --accent: 36 88% 38%;
-    --accent-fg: 40 40% 98%;
+    /* Darkened in light mode so text on it still clears AA. */
+    --accent: 191 95% 30%;
+    --accent-fg: 0 0% 100%;
 
-    --outcome-ok: 155 62% 30%;
+    --outcome-ok: 155 60% 30%;
     --outcome-fail: 356 70% 45%;
-    --outcome-late: 272 62% 50%;
+    --outcome-late: 272 60% 50%;
     --outcome-skipped: 215 12% 48%;
-    --outcome-idle: 34 8% 58%;
-    --now: 190 92% 32%;
+    --outcome-idle: 214 9% 58%;
+    --now: 32 92% 40%;
 
     --radius: 3px;
   }
 
   .dark {
-    /* Warm charcoal. There is amber in the black, which is the whole point. */
-    --surface-0: 28 16% 5%;
-    --surface-1: 28 14% 8%;
-    --surface-2: 28 12% 12%;
+    --surface-0: 215 30% 6%;
+    --surface-1: 215 25% 9%;
+    --surface-2: 215 21% 13%;
 
-    --text-primary: 40 22% 95%;
-    --text-secondary: 36 12% 70%;
-    --text-muted: 34 9% 55%;
+    --text-primary: 210 20% 96%;
+    --text-secondary: 214 14% 71%;
+    --text-muted: 214 11% 56%;
 
-    --border: 30 12% 16%;
-    --border-strong: 30 11% 26%;
+    --border: 215 19% 17%;
+    --border-strong: 215 16% 27%;
 
-    --accent: 40 96% 60%;
-    --accent-fg: 30 40% 8%;
+    --accent: 187 92% 54%;
+    --accent-fg: 200 60% 8%;
 
-    /* Lifted against a dark warm ground: the same emerald reads dimmer here
-       than it does on paper, and a successful run must never look uncertain. */
+    /* Lifted in dark: the same emerald reads dimmer on a near-black ground than
+       it does on paper, and a successful run must never look uncertain. */
     --outcome-ok: 152 58% 50%;
     --outcome-fail: 357 82% 66%;
-    --outcome-late: 272 88% 74%;
+    --outcome-late: 272 88% 76%;
     --outcome-skipped: 214 16% 58%;
-    --outcome-idle: 32 8% 44%;
-    --now: 187 95% 56%;
+    --outcome-idle: 214 10% 45%;
+    --now: 38 96% 60%;
   }
 }
 
