@@ -14,63 +14,81 @@
 }
 
 /*
-  Dark-first, sibling to muiru-watch: same three surfaces, same three text
-  tiers, same 6px radius, same density. The accent is teal rather than indigo
-  so the two products are distinguishable at a glance in a browser full of
-  tabs, and the status ramp describes run outcomes rather than service health.
+  Brass and ink.
 
-  Neither theme uses pure black or pure white. Pure black makes elevation
-  impossible to read; pure white glares next to saturated status colour.
+  muiru-watch is a cool blue-grey room with an indigo accent. tick is the
+  opposite temperature on purpose: a warm charcoal room — near-black with a
+  trace of amber in it, the colour of an unlit instrument panel — with brass as
+  the interactive colour. Two products by the same hand, not the same product
+  twice.
+
+  The one cool colour in the system is `now`, an electric cyan, and it is used
+  for exactly one thing: the present moment on the timeline. Against a warm
+  ground it is impossible to miss and impossible to confuse with anything else.
+
+  Neither theme uses pure black or pure white. Pure black kills elevation; pure
+  white glares next to saturated status colour.
+
+  Status semantics, and why each hue:
+    ok       emerald   the run did what it was asked
+    fail     rose      the customer's endpoint said no
+    late     violet    *we* were the problem — deliberately not a warm hue, so
+                       it never blurs into brass
+    skipped  slate     nothing happened, and that was correct
+    now      cyan      the present, and nothing else ever
 */
 @layer base {
   :root {
-    --surface-0: 0 0% 98%;
-    --surface-1: 0 0% 100%;
-    --surface-2: 220 14% 96%;
+    /* Warm paper rather than blue-white. */
+    --surface-0: 40 24% 97%;
+    --surface-1: 40 30% 99%;
+    --surface-2: 38 20% 93%;
 
-    --text-primary: 222 32% 12%;
-    --text-secondary: 220 9% 38%;
-    --text-muted: 220 9% 50%;
+    --text-primary: 30 18% 12%;
+    --text-secondary: 32 8% 36%;
+    --text-muted: 32 7% 48%;
 
-    --border: 220 13% 89%;
-    --border-strong: 220 13% 80%;
+    --border: 36 16% 86%;
+    --border-strong: 34 14% 74%;
 
-    /* One accent. It marks the interactive path and nothing else — an outcome
-       is never drawn from this ramp. */
-    --accent: 187 84% 31%;
-    --accent-fg: 0 0% 100%;
+    /* Brass. Darkened in light mode so text on it still clears AA. */
+    --accent: 36 88% 38%;
+    --accent-fg: 40 40% 98%;
 
-    --outcome-ok: 152 58% 34%;
-    --outcome-fail: 355 68% 47%;
-    --outcome-late: 33 88% 42%;
-    --outcome-skipped: 262 52% 52%;
-    --outcome-idle: 220 9% 55%;
+    --outcome-ok: 155 62% 30%;
+    --outcome-fail: 356 70% 45%;
+    --outcome-late: 272 62% 50%;
+    --outcome-skipped: 215 12% 48%;
+    --outcome-idle: 34 8% 58%;
+    --now: 190 92% 32%;
 
-    --radius: 6px;
+    --radius: 3px;
   }
 
   .dark {
-    --surface-0: 220 26% 6%;
-    --surface-1: 220 22% 9%;
-    --surface-2: 220 19% 13%;
+    /* Warm charcoal. There is amber in the black, which is the whole point. */
+    --surface-0: 28 16% 5%;
+    --surface-1: 28 14% 8%;
+    --surface-2: 28 12% 12%;
 
-    --text-primary: 210 20% 96%;
-    --text-secondary: 218 14% 71%;
-    --text-muted: 218 11% 58%;
+    --text-primary: 40 22% 95%;
+    --text-secondary: 36 12% 70%;
+    --text-muted: 34 9% 55%;
 
-    --border: 220 16% 18%;
-    --border-strong: 220 14% 26%;
+    --border: 30 12% 16%;
+    --border-strong: 30 11% 26%;
 
-    --accent: 187 72% 52%;
-    --accent-fg: 200 60% 8%;
+    --accent: 40 96% 60%;
+    --accent-fg: 30 40% 8%;
 
-    /* Lifted in dark: the same green on a near-black surface reads dimmer than
-       it does on white, and a successful run must never look uncertain. */
-    --outcome-ok: 150 62% 47%;
-    --outcome-fail: 358 75% 62%;
-    --outcome-late: 38 92% 56%;
-    --outcome-skipped: 262 76% 72%;
-    --outcome-idle: 218 11% 48%;
+    /* Lifted against a dark warm ground: the same emerald reads dimmer here
+       than it does on paper, and a successful run must never look uncertain. */
+    --outcome-ok: 152 58% 50%;
+    --outcome-fail: 357 82% 66%;
+    --outcome-late: 272 88% 74%;
+    --outcome-skipped: 214 16% 58%;
+    --outcome-idle: 32 8% 44%;
+    --now: 187 95% 56%;
   }
 }
 

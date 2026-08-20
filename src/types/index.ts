@@ -86,6 +86,8 @@ export type Job = {
   consecutiveFailures: number
   runs7d: number
   successRate7d: number | null
+  /** Last twenty runs, oldest first, for the strip on the job list. */
+  recentOutcomes: string[]
   createdAt: string
   updatedAt: string
 }
@@ -136,7 +138,29 @@ export type Incident = {
   escalating: boolean
 }
 
+export type TimelineRun = {
+  runUuid: string
+  occurrenceId: string
+  jobUuid: string
+  jobName: string
+  scheduledFor: string
+  startedAt: string | null
+  state: RunState
+  outcome: Outcome | null
+  durationMs: number | null
+  latenessMs: number | null
+}
+
+export type TimelineSlot = { jobUuid: string; jobName: string; at: string }
+
 export type Overview = {
+  timeline: {
+    from: string
+    now: string
+    to: string
+    past: TimelineRun[]
+    future: TimelineSlot[]
+  }
   totals: {
     jobs: number
     paused: number

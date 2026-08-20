@@ -2,6 +2,7 @@ import { A } from '@solidjs/router'
 import { For, Show, createSignal, onCleanup, onMount } from 'solid-js'
 import { Shell } from '../../components/shared/Shell'
 import { OutcomeDot } from '../../components/shared/Outcome'
+import { RunStrip } from '../../components/shared/RunStrip'
 import { Card, CardHeader } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -96,9 +97,9 @@ export default function Jobs() {
             <div class="hidden items-center gap-3 border-b border-border px-3.5 py-1.5 text-2xs uppercase tracking-wide text-muted lg:flex">
               <span class="w-2" />
               <span class="flex-1">Job</span>
-              <span class="w-56">Schedule</span>
-              <span class="w-28">Next run</span>
-              <span class="w-24">Last run</span>
+              <span class="w-52">Schedule</span>
+              <span class="w-[92px]">Last 20 runs</span>
+              <span class="w-24">Next run</span>
               <span class="w-20 text-right">7-day</span>
               <span class="w-16" />
             </div>
@@ -144,19 +145,18 @@ function JobRow(props: { job: Job; now: number; busy: boolean; onToggle: () => v
         </p>
       </div>
 
-      <span class="w-full truncate text-xs text-secondary lg:w-56">{props.job.schedule.human}</span>
+      <span class="w-full truncate text-xs text-secondary lg:w-52">{props.job.schedule.human}</span>
 
-      <span class="num w-28 shrink-0 text-xs">
-        <Show
-          when={props.job.enabled}
-          fallback={<span class="text-muted">paused</span>}
-        >
-          <span class="text-primary">{props.now ? countdown(props.job.schedule.nextRunAt) : ''}</span>
-        </Show>
+      {/* Twenty marks say whether this job is steady, flapping or newly broken.
+          One last-run badge cannot. */}
+      <span class="w-[92px] shrink-0" title="Oldest to newest">
+        <RunStrip outcomes={props.job.recentOutcomes} />
       </span>
 
-      <span class="num w-24 shrink-0 text-xs text-secondary">
-        {duration(props.job.last.durationMs)}
+      <span class="num w-24 shrink-0 text-xs">
+        <Show when={props.job.enabled} fallback={<span class="text-muted">paused</span>}>
+          <span class="text-primary">{props.now ? countdown(props.job.schedule.nextRunAt) : ''}</span>
+        </Show>
       </span>
 
       <span

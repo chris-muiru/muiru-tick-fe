@@ -6,6 +6,7 @@ import { subscribeToEvents, type ConnectionState } from '../../lib/events'
 import { useTickInvalidator } from '../../resource/account/hook'
 import { ThemeToggle } from './ThemeToggle'
 import { LiveIndicator } from './LiveIndicator'
+import { Clock } from './Clock'
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: '◫' },
@@ -15,14 +16,21 @@ const NAV = [
   { href: '/settings', label: 'Settings', icon: '⚙' },
 ]
 
+/**
+ * A left rail rather than a top bar.
+ *
+ * Partly so this does not read as muiru-watch with a different accent, and
+ * partly because the rail earns its width: the wall clock lives at the top of
+ * it, always visible, in the same monospace as every time on screen. In a
+ * scheduler the current time is not chrome — it is the reference every other
+ * number on the page is relative to.
+ */
 export function Shell(props: { children: JSX.Element }) {
   const navigate = useNavigate()
   const invalidate = useTickInvalidator()
   const [connection, setConnection] = createSignal<ConnectionState>('connecting')
-  // The session lives in localStorage, which the server cannot see. Deciding
-  // auth during SSR always renders "signed out", and a hydration hiccup then
-  // freezes that wrong answer on screen. The server emits a skeleton; the
-  // client decides.
+  // The session lives in localStorage, which the server cannot see, so auth is
+  // decided on the client. The server emits a skeleton.
   const [mounted, setMounted] = createSignal(false)
   const [lastEventAt, setLastEventAt] = createSignal<string | undefined>()
   onMount(() => setMounted(true))
@@ -31,8 +39,8 @@ export function Shell(props: { children: JSX.Element }) {
     if (mounted() && !session()) navigate('/login', { replace: true })
   })
 
-  // One stream for the whole app, mounted at the shell. Events invalidate the
-  // query cache; each screen re-reads only what it subscribes to. Nothing polls.
+  // One stream for the whole app. Events invalidate the query cache; each
+  // screen re-reads only what it subscribes to. Nothing polls.
   onMount(() =>
     subscribeToEvents(() => {
       setLastEventAt(new Date().toISOString())
@@ -50,63 +58,81 @@ export function Shell(props: { children: JSX.Element }) {
       <Show when={session()} fallback={<SignInRequired />}>
         {(current) => (
           <div class="min-h-screen bg-surface-0">
-            <header class="sticky top-0 z-30 border-b border-border bg-surface-0/90 backdrop-blur-sm">
-              <div class="mx-auto flex h-12 max-w-[1600px] items-center gap-4 px-4">
-                <A
-                  href="/dashboard"
-                  class="flex items-center gap-2 text-sm font-semibold tracking-tight text-primary"
-                >
-                  <span class="grid h-5 w-5 place-items-center rounded bg-accent text-[11px] font-bold text-accent-fg">
-                    ◷
-                  </span>
-                  <span class="hidden sm:inline">muiru-tick</span>
-                </A>
+            <aside class="fixed inset-y-0 left-0 z-30 hidden w-14 flex-col border-r border-border bg-surface-1 md:flex xl:w-52">
+              <A
+                href="/dashboard"
+                class="flex h-12 items-center gap-2 border-b border-border px-4 text-sm font-semibold tracking-tight text-primary"
+              >
+                <span class="grid h-5 w-5 shrink-0 place-items-center rounded-sm bg-accent text-[11px] font-bold text-accent-fg">
+                  ◷
+                </span>
+                <span class="hidden xl:inline">muiru-tick</span>
+              </A>
 
-                <nav class="hidden items-center gap-0.5 text-xs md:flex" aria-label="Main">
-                  <For each={NAV}>
-                    {(item) => (
-                      <A
-                        href={item.href}
-                        class="relative whitespace-nowrap rounded px-2.5 py-1.5 transition-colors hover:bg-surface-2"
-                        inactiveClass="text-secondary hover:text-primary"
-                        activeClass="bg-accent/10 font-medium text-accent after:absolute after:inset-x-2.5 after:-bottom-[7px] after:h-0.5 after:rounded-full after:bg-accent"
-                      >
-                        {item.label}
-                      </A>
-                    )}
-                  </For>
-                </nav>
+              <div class="border-b border-border px-4 py-3">
+                <Clock />
+              </div>
 
-                <div class="ml-auto flex items-center gap-2">
-                  <span class="hidden md:inline">
-                    <LiveIndicator state={connection()} lastEventAt={lastEventAt()} />
-                  </span>
-                  <Show when={current().tenants.length > 1}>
-                    <select
-                      class="h-8 rounded border border-border bg-surface-1 px-1.5 text-xs text-primary"
-                      value={current().activeTenantUuid}
-                      onChange={(e) => switchTenant(e.currentTarget.value)}
-                      aria-label="Workspace"
+              <nav class="flex-1 py-2 text-xs" aria-label="Main">
+                <For each={NAV}>
+                  {(item) => (
+                    <A
+                      href={item.href}
+                      title={item.label}
+                      class="relative flex h-9 items-center gap-3 px-4 transition-colors hover:bg-surface-2"
+                      inactiveClass="text-secondary hover:text-primary"
+                      activeClass="bg-accent/10 font-medium text-accent before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-r-full before:bg-accent"
                     >
-                      <For each={current().tenants}>
-                        {(tenant) => <option value={tenant.uuid}>{tenant.name}</option>}
-                      </For>
-                    </select>
-                  </Show>
+                      <span aria-hidden="true" class="w-3 shrink-0 text-center leading-none">
+                        {item.icon}
+                      </span>
+                      <span class="hidden xl:inline">{item.label}</span>
+                    </A>
+                  )}
+                </For>
+              </nav>
+
+              <div class="border-t border-border px-4 py-3">
+                <LiveIndicator state={connection()} lastEventAt={lastEventAt()} />
+                <div class="mt-2 flex items-center gap-1">
                   <ThemeToggle />
                   <button
                     onClick={signOut}
-                    class="h-8 rounded px-2 text-xs text-muted transition-colors hover:bg-surface-2 hover:text-primary"
+                    title="Sign out"
+                    class="hidden h-8 rounded px-2 text-xs text-muted transition-colors hover:bg-surface-2 hover:text-primary xl:block"
                   >
                     Sign out
                   </button>
                 </div>
+                <Show when={current().tenants.length > 1}>
+                  <select
+                    class="mt-2 hidden h-8 w-full rounded border border-border bg-surface-1 px-1.5 text-xs text-primary xl:block"
+                    value={current().activeTenantUuid}
+                    onChange={(e) => switchTenant(e.currentTarget.value)}
+                    aria-label="Workspace"
+                  >
+                    <For each={current().tenants}>
+                      {(tenant) => <option value={tenant.uuid}>{tenant.name}</option>}
+                    </For>
+                  </select>
+                </Show>
               </div>
+            </aside>
+
+            {/* A phone gets the thumb-reachable bottom bar instead of the rail,
+                so the header only exists below md. */}
+            <header class="sticky top-0 z-20 flex h-12 items-center gap-3 border-b border-border bg-surface-0/90 px-3 backdrop-blur-sm md:hidden">
+              <span class="grid h-5 w-5 place-items-center rounded-sm bg-accent text-[11px] font-bold text-accent-fg">
+                ◷
+              </span>
+              <Clock compact />
+              <span class="ml-auto flex items-center gap-2">
+                <LiveIndicator state={connection()} lastEventAt={lastEventAt()} />
+                <ThemeToggle />
+              </span>
             </header>
 
-            {/* pb-20 on mobile clears the fixed bottom bar so the last row is
-                never trapped underneath it. */}
-            <main class="mx-auto min-w-0 max-w-[1600px] overflow-x-hidden px-3 pb-20 pt-4 sm:px-4 sm:py-5 md:pb-5">
+            <main class="mx-auto min-w-0 max-w-[1500px] overflow-x-hidden px-3 pb-20 pt-4 md:pl-[4.5rem] md:pr-4 md:pb-6 xl:pl-56">
               {props.children}
             </main>
 
@@ -137,20 +163,13 @@ export function Shell(props: { children: JSX.Element }) {
   )
 }
 
-/** Matches the shell's real footprint, so first paint does not shift. */
 function ShellSkeleton() {
   return (
     <div class="min-h-screen bg-surface-0">
-      <header class="border-b border-border">
-        <div class="mx-auto flex h-12 max-w-[1600px] items-center gap-4 px-4">
-          <Skeleton class="h-5 w-28" />
-          <Skeleton class="h-5 w-64" />
-          <Skeleton class="ml-auto h-5 w-24" />
-        </div>
-      </header>
-      <main class="mx-auto max-w-[1600px] space-y-4 px-4 py-5">
+      <aside class="fixed inset-y-0 left-0 hidden w-14 border-r border-border bg-surface-1 md:block xl:w-52" />
+      <main class="mx-auto max-w-[1500px] space-y-4 px-4 py-5 md:pl-[4.5rem] xl:pl-56">
         <Skeleton class="h-7 w-40" />
-        <Skeleton class="h-[68px] w-full" />
+        <Skeleton class="h-24 w-full" />
         <Skeleton class="h-64 w-full" />
       </main>
     </div>

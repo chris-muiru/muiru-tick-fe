@@ -22,11 +22,14 @@ const config: Config = {
         },
         // Run outcomes, not service health. "late" is its own colour because
         // it is the one status that is our fault rather than the customer's.
+        // "now" marks the present moment on the timeline and is used nowhere
+        // else, so the eye learns it in one glance.
         ok: 'hsl(var(--outcome-ok))',
         fail: 'hsl(var(--outcome-fail))',
         late: 'hsl(var(--outcome-late))',
         skipped: 'hsl(var(--outcome-skipped))',
         idle: 'hsl(var(--outcome-idle))',
+        now: 'hsl(var(--now))',
       },
       borderRadius: {
         DEFAULT: 'var(--radius)',
