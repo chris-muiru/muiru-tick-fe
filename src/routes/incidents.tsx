@@ -4,6 +4,7 @@ import { Shell } from '../components/shared/Shell'
 import { ListSection } from '../components/shared/Section'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { ConfirmButton } from '../components/shared/ConfirmButton'
 import { useIncidentMutations, useIncidentsQuery } from '../resource/incident/hook'
 import { relativeTime } from '../lib/format'
 import { cn } from '../lib/utils'
@@ -100,6 +101,10 @@ export default function Incidents() {
             </Show>
             <Show when={incident.state === 'resolved'}>
               <Badge variant="ok">Resolved</Badge>
+              <ConfirmButton
+                pending={mutations.remove.isPending}
+                onConfirm={() => mutations.remove.mutate(incident.uuid)}
+              />
             </Show>
           </div>
         )}

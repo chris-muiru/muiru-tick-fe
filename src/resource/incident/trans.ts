@@ -8,3 +8,5 @@ export const acknowledgeIncident = (uuid: string) =>
   http.post<void>(`/incidents/${uuid}/acknowledge`)
 
 export const resolveIncident = (uuid: string) => http.post<void>(`/incidents/${uuid}/resolve`)
+
+export const deleteIncident = (uuid: string) => http.del<void>(`/incidents/${uuid}`)

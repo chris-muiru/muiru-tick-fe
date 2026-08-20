@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/solid-query'
 import { activeTenantUuid } from '../../lib/session'
 import { TICK_QUERY_NAMES, scopedKey } from '../queryKeys'
-import { acknowledgeIncident, fetchIncidents, resolveIncident } from './trans'
+import { acknowledgeIncident, deleteIncident, fetchIncidents, resolveIncident } from './trans'
 
 export const useIncidentsQuery = (state: () => string | undefined) =>
   useQuery(() => ({
@@ -16,5 +16,6 @@ export const useIncidentMutations = () => {
   return {
     acknowledge: useMutation(() => ({ mutationFn: acknowledgeIncident, onSuccess: invalidate })),
     resolve: useMutation(() => ({ mutationFn: resolveIncident, onSuccess: invalidate })),
+    remove: useMutation(() => ({ mutationFn: deleteIncident, onSuccess: invalidate })),
   }
 }

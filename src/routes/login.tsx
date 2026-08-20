@@ -6,6 +6,8 @@ import { Field } from '../components/ui/field'
 import { Input } from '../components/ui/input'
 import { login } from '../resource/account/trans'
 import { startSession } from '../lib/session'
+import { useZodForm } from '../lib/useZodForm'
+import { loginSchema } from '../schemas/auth'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -13,10 +15,12 @@ export default function Login() {
   const [password, setPassword] = createSignal('')
   const [error, setError] = createSignal('')
   const [busy, setBusy] = createSignal(false)
+  const validation = useZodForm(loginSchema)
 
   const submit = async (e: Event) => {
     e.preventDefault()
     setError('')
+    if (!validation.validateAll({ email: email(), password: password() })) return
     setBusy(true)
     try {
       const result = await login(email(), password())
@@ -40,22 +44,26 @@ export default function Login() {
       }
     >
       <form class="space-y-3" onSubmit={submit}>
-        <Field label="Email">
+        <Field label="Email" error={validation.errors().email}>
           <Input
             type="email"
-            required
             autocomplete="email"
             value={email()}
-            onInput={(e) => setEmail(e.currentTarget.value)}
+            onInput={(e) => {
+              setEmail(e.currentTarget.value)
+              validation.clearField('email')
+            }}
           />
         </Field>
-        <Field label="Password">
+        <Field label="Password" error={validation.errors().password}>
           <Input
             type="password"
-            required
             autocomplete="current-password"
             value={password()}
-            onInput={(e) => setPassword(e.currentTarget.value)}
+            onInput={(e) => {
+              setPassword(e.currentTarget.value)
+              validation.clearField('password')
+            }}
           />
         </Field>
         <Show when={error()}>

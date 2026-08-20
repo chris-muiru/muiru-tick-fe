@@ -5,6 +5,7 @@ import { SectionsSkeleton } from '../../../components/shared/PageSkeleton'
 import { RunTable } from '../../../components/run/RunTable'
 import { RunChart } from '../../../components/run/RunChart'
 import { SecretValue } from '../../../components/shared/SecretValue'
+import { ConfirmButton } from '../../../components/shared/ConfirmButton'
 import { Card, CardBody, CardHeader } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
@@ -72,16 +73,14 @@ export default function JobDetail() {
                 >
                   Edit
                 </A>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    if (!confirm(`Delete ${loaded().name}? Its run history goes with it.`)) return
+                <ConfirmButton
+                  class="h-7 px-2.5 text-xs"
+                  question="Delete this job and its history?"
+                  pending={mutations.remove.isPending}
+                  onConfirm={() =>
                     mutations.remove.mutate(params.uuid, { onSuccess: () => navigate('/jobs') })
-                  }}
-                >
-                  Delete
-                </Button>
+                  }
+                />
               </div>
             </div>
 
@@ -237,16 +236,14 @@ export default function JobDetail() {
                       }
                     >
                       <SecretValue value={secret()} />
-                      <button
-                        type="button"
-                        class="text-2xs text-muted hover:text-fail"
-                        onClick={async () => {
-                          if (!confirm('Rotate? Existing verification code stops matching immediately.')) return
+                      <ConfirmButton
+                        label="Rotate"
+                        confirmLabel="Rotate"
+                        question="Existing verification stops matching immediately."
+                        onConfirm={async () =>
                           setSecret((await rotateSigningSecret(params.uuid)).signingSecret)
-                        }}
-                      >
-                        Rotate
-                      </button>
+                        }
+                      />
                     </Show>
                   </CardBody>
                 </Card>

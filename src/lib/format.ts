@@ -61,26 +61,41 @@ export function browserTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 }
 
-/** The IANA zones offered in the editor, browser zone first so it is one click. */
-export function timezoneOptions(): string[] {
-  const common = [
-    'UTC',
-    'Africa/Nairobi',
-    'Africa/Lagos',
-    'Africa/Johannesburg',
-    'Europe/London',
-    'Europe/Berlin',
-    'Europe/Paris',
-    'America/New_York',
-    'America/Chicago',
-    'America/Los_Angeles',
-    'America/Sao_Paulo',
-    'Asia/Dubai',
-    'Asia/Kolkata',
-    'Asia/Singapore',
-    'Asia/Tokyo',
-    'Australia/Sydney',
-  ]
+/**
+ * Every IANA zone the browser knows, each carrying the time it is there now.
+ *
+ * The category standard is a native dropdown of four hundred names and good
+ * luck; showing the current local time turns picking one into a decision you
+ * can verify on the spot rather than a guess you find out about tomorrow
+ * morning. The browser's own zone is pinned to the top, because it is right
+ * most of the time.
+ */
+export function timezoneOptions(): { value: string; label: string; trailing: string }[] {
   const local = browserTimezone()
-  return common.includes(local) ? common : [local, ...common]
+  const zones: string[] =
+    typeof Intl.supportedValuesOf === 'function'
+      ? Intl.supportedValuesOf('timeZone')
+      : ['UTC', local]
+  const ordered = ['UTC', local, ...zones.filter((zone) => zone !== 'UTC' && zone !== local)]
+
+  const now = new Date()
+  const seen = new Set<string>()
+  const out: { value: string; label: string; trailing: string }[] = []
+  for (const zone of ordered) {
+    if (seen.has(zone)) continue
+    seen.add(zone)
+    let trailing = ''
+    try {
+      trailing = now.toLocaleTimeString(undefined, {
+        timeZone: zone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+    } catch {
+      continue
+    }
+    out.push({ value: zone, label: zone.replace(/_/g, ' '), trailing })
+  }
+  return out
 }

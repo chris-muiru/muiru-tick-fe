@@ -1,5 +1,7 @@
 import { For, Show, createMemo } from 'solid-js'
-import { Input, Select } from '../ui/input'
+import { Input } from '../ui/input'
+import { Select } from '../ui/select'
+import { Combobox } from '../ui/combobox'
 import { Field } from '../ui/field'
 import { cn } from '../../lib/utils'
 import { timezoneOptions } from '../../lib/format'
@@ -18,11 +20,36 @@ export type ScheduleValue = {
  * hides the expression teaches its users nothing and traps the ones who already
  * know what they want.
  */
+const REPEAT_OPTIONS = [
+  { value: 'everyMinutes', label: 'Every N minutes' },
+  { value: 'everyHours', label: 'Every N hours' },
+  { value: 'daily', label: 'Every day', hint: 'One wall-clock time, every day.' },
+  { value: 'weekdays', label: 'Every weekday', hint: 'Monday to Friday.' },
+  { value: 'weekly', label: 'Certain days of the week' },
+  { value: 'monthly', label: 'Once a month', hint: 'Months without that day are skipped.' },
+  { value: 'custom', label: 'Custom expression', hint: 'Write the five fields yourself.' },
+]
+
+const numberOptions = (values: number[], unit: string) =>
+  values.map((n) => ({ value: String(n), label: n === 1 ? `every ${unit}` : `${n} ${unit}s` }))
+
+const padded = (count: number) =>
+  Array.from({ length: count }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }))
+
+function ordinal(n: number): string {
+  const suffix =
+    n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'
+  return `${n}${suffix}`
+}
+
 export function CronBuilder(props: {
   value: ScheduleValue
   onChange: (next: ScheduleValue) => void
 }) {
   const pattern = createMemo(() => fromCron(props.value.cronExpr))
+  // Built once per mount: four hundred zones formatted on every keystroke would
+  // be felt, and a minute of drift in the displayed time does not matter.
+  const zones = createMemo(() => timezoneOptions())
   const set = (partial: Partial<ScheduleValue>) => props.onChange({ ...props.value, ...partial })
   const setPattern = (next: Pattern) => set({ cronExpr: toCron(next) })
 
@@ -90,16 +117,9 @@ export function CronBuilder(props: {
           <Field label="Repeats">
             <Select
               value={pattern().kind}
-              onChange={(e) => setPattern(defaultFor(e.currentTarget.value as Pattern['kind'], props.value.cronExpr))}
-            >
-              <option value="everyMinutes">Every N minutes</option>
-              <option value="everyHours">Every N hours</option>
-              <option value="daily">Every day</option>
-              <option value="weekdays">Every weekday</option>
-              <option value="weekly">Certain days of the week</option>
-              <option value="monthly">Once a month</option>
-              <option value="custom">Custom expression</option>
-            </Select>
+              options={REPEAT_OPTIONS}
+              onChange={(value) => setPattern(defaultFor(value as Pattern['kind'], props.value.cronExpr))}
+            />
           </Field>
 
           <PatternFields pattern={pattern()} onChange={setPattern} />
@@ -122,11 +142,14 @@ export function CronBuilder(props: {
 
       <Field
         label="Timezone"
-        hint="Cron is evaluated here, not in server time. Daylight-saving changes are handled explicitly — see the notes in the preview."
+        hint="Cron is evaluated here, not in server time. Each zone shows the time it is there right now."
       >
-        <Select value={props.value.timezone} onChange={(e) => set({ timezone: e.currentTarget.value })}>
-          <For each={timezoneOptions()}>{(zone) => <option value={zone}>{zone}</option>}</For>
-        </Select>
+        <Combobox
+          value={props.value.timezone}
+          options={zones()}
+          placeholder="Search zones…"
+          onChange={(timezone) => set({ timezone })}
+        />
       </Field>
     </div>
   )
@@ -140,12 +163,9 @@ function PatternFields(props: { pattern: Pattern; onChange: (next: Pattern) => v
           <Field label="Minutes between runs">
             <Select
               value={String(p().minutes)}
-              onChange={(e) => props.onChange({ kind: 'everyMinutes', minutes: Number(e.currentTarget.value) })}
-            >
-              <For each={[1, 2, 5, 10, 15, 20, 30]}>
-                {(n) => <option value={n}>{n}</option>}
-              </For>
-            </Select>
+              options={numberOptions([1, 2, 5, 10, 15, 20, 30], 'minute')}
+              onChange={(value) => props.onChange({ kind: 'everyMinutes', minutes: Number(value) })}
+            />
           </Field>
         )}
       </Show>
@@ -156,12 +176,11 @@ function PatternFields(props: { pattern: Pattern; onChange: (next: Pattern) => v
             <Field label="Hours between">
               <Select
                 value={String(p().hours)}
-                onChange={(e) =>
-                  props.onChange({ kind: 'everyHours', hours: Number(e.currentTarget.value), minute: p().minute })
+                options={numberOptions([1, 2, 3, 4, 6, 8, 12], 'hour')}
+                onChange={(value) =>
+                  props.onChange({ kind: 'everyHours', hours: Number(value), minute: p().minute })
                 }
-              >
-                <For each={[1, 2, 3, 4, 6, 8, 12]}>{(n) => <option value={n}>{n}</option>}</For>
-              </Select>
+              />
             </Field>
             <Field label="At minute">
               <MinuteSelect
@@ -235,12 +254,12 @@ function PatternFields(props: { pattern: Pattern; onChange: (next: Pattern) => v
             <Field label="Day of month" hint="Months without this day are skipped.">
               <Select
                 value={String(p().day)}
-                onChange={(e) => props.onChange({ ...p(), day: Number(e.currentTarget.value) })}
-              >
-                <For each={Array.from({ length: 31 }, (_, i) => i + 1)}>
-                  {(n) => <option value={n}>{n}</option>}
-                </For>
-              </Select>
+                options={Array.from({ length: 31 }, (_, i) => ({
+                  value: String(i + 1),
+                  label: ordinal(i + 1),
+                }))}
+                onChange={(value) => props.onChange({ ...p(), day: Number(value) })}
+              />
             </Field>
             <Field label="At">
               <TimeOfDay
@@ -267,14 +286,11 @@ function TimeOfDay(props: { hour: number; minute: number; onChange: (hour: numbe
   return (
     <div class="flex items-center gap-1.5">
       <Select
-        class="w-auto"
+        class="w-[86px]"
         value={String(props.hour)}
-        onChange={(e) => props.onChange(Number(e.currentTarget.value), props.minute)}
-      >
-        <For each={Array.from({ length: 24 }, (_, i) => i)}>
-          {(n) => <option value={n}>{String(n).padStart(2, '0')}</option>}
-        </For>
-      </Select>
+        options={padded(24)}
+        onChange={(value) => props.onChange(Number(value), props.minute)}
+      />
       <span class="text-muted">:</span>
       <MinuteSelect value={props.minute} onChange={(minute) => props.onChange(props.hour, minute)} />
     </div>
@@ -283,11 +299,12 @@ function TimeOfDay(props: { hour: number; minute: number; onChange: (hour: numbe
 
 function MinuteSelect(props: { value: number; onChange: (minute: number) => void }) {
   return (
-    <Select class="w-auto" value={String(props.value)} onChange={(e) => props.onChange(Number(e.currentTarget.value))}>
-      <For each={Array.from({ length: 60 }, (_, i) => i)}>
-        {(n) => <option value={n}>{String(n).padStart(2, '0')}</option>}
-      </For>
-    </Select>
+    <Select
+      class="w-[86px]"
+      value={String(props.value)}
+      options={padded(60)}
+      onChange={(value) => props.onChange(Number(value))}
+    />
   )
 }
 
@@ -309,12 +326,13 @@ function IntervalFields(props: { seconds: number; onChange: (seconds: number) =>
       <Field label="Unit">
         <Select
           value={String(unit())}
-          onChange={(e) => props.onChange(Math.max(60, amount() * Number(e.currentTarget.value)))}
-        >
-          <option value="60">minutes</option>
-          <option value="3600">hours</option>
-          <option value="86400">days</option>
-        </Select>
+          options={[
+            { value: '60', label: 'minutes' },
+            { value: '3600', label: 'hours' },
+            { value: '86400', label: 'days' },
+          ]}
+          onChange={(value) => props.onChange(Math.max(60, amount() * Number(value)))}
+        />
       </Field>
     </div>
   )

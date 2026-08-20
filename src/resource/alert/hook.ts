@@ -10,7 +10,9 @@ import {
   fetchDeliveries,
   fetchPolicies,
   fetchWebhookDeliveries,
+  replacePolicy,
   testChannel,
+  updateChannel,
 } from './trans'
 
 export const useChannelsQuery = () =>
@@ -48,7 +50,15 @@ export const useAlertMutations = () => {
     createChannel: useMutation(() => ({ mutationFn: createChannel, onSuccess: invalidate })),
     deleteChannel: useMutation(() => ({ mutationFn: deleteChannel, onSuccess: invalidate })),
     testChannel: useMutation(() => ({ mutationFn: testChannel })),
+    updateChannel: useMutation(() => ({
+      mutationFn: (input: { uuid: string; body: unknown }) => updateChannel(input.uuid, input.body),
+      onSuccess: invalidate,
+    })),
     createPolicy: useMutation(() => ({ mutationFn: createPolicy, onSuccess: invalidate })),
+    replacePolicy: useMutation(() => ({
+      mutationFn: (input: { uuid: string; body: unknown }) => replacePolicy(input.uuid, input.body),
+      onSuccess: invalidate,
+    })),
     deletePolicy: useMutation(() => ({ mutationFn: deletePolicy, onSuccess: invalidate })),
   }
 }

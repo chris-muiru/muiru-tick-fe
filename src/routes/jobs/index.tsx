@@ -3,6 +3,7 @@ import { For, Show, createSignal, onCleanup, onMount } from 'solid-js'
 import { Shell } from '../../components/shared/Shell'
 import { OutcomeDot } from '../../components/shared/Outcome'
 import { RunStrip } from '../../components/shared/RunStrip'
+import { ConfirmButton } from '../../components/shared/ConfirmButton'
 import { Card, CardHeader } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -101,7 +102,7 @@ export default function Jobs() {
               <span class="w-[92px]">Last 20 runs</span>
               <span class="w-24">Next run</span>
               <span class="w-20 text-right">7-day</span>
-              <span class="w-16" />
+              <span class="w-32" />
             </div>
 
             <div class="divide-y divide-border">
@@ -116,6 +117,8 @@ export default function Jobs() {
                         ? mutations.pause.mutate(job.uuid)
                         : mutations.resume.mutate(job.uuid)
                     }
+                    onDelete={() => mutations.remove.mutate(job.uuid)}
+                    deleting={mutations.remove.isPending}
                   />
                 )}
               </For>
@@ -127,7 +130,14 @@ export default function Jobs() {
   )
 }
 
-function JobRow(props: { job: Job; now: number; busy: boolean; onToggle: () => void }) {
+function JobRow(props: {
+  job: Job
+  now: number
+  busy: boolean
+  onToggle: () => void
+  onDelete: () => void
+  deleting: boolean
+}) {
   const rate = () => props.job.successRate7d
   return (
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2.5 transition-colors hover:bg-surface-2 lg:flex-nowrap">
@@ -169,14 +179,21 @@ function JobRow(props: { job: Job; now: number; busy: boolean; onToggle: () => v
         {percent(rate())}
       </span>
 
-      <button
-        type="button"
-        onClick={props.onToggle}
-        disabled={props.busy}
-        class="w-16 shrink-0 rounded border border-border px-2 py-1 text-2xs text-secondary transition-colors hover:bg-surface-2 hover:text-primary disabled:opacity-50"
-      >
-        {props.job.enabled ? 'Pause' : 'Resume'}
-      </button>
+      <span class="flex w-32 shrink-0 items-center justify-end gap-1">
+        <button
+          type="button"
+          onClick={props.onToggle}
+          disabled={props.busy}
+          class="rounded border border-border px-2 py-1 text-2xs text-secondary transition-colors hover:bg-surface-2 hover:text-primary disabled:opacity-50"
+        >
+          {props.job.enabled ? 'Pause' : 'Resume'}
+        </button>
+        <ConfirmButton
+          question="Delete?"
+          pending={props.deleting}
+          onConfirm={props.onDelete}
+        />
+      </span>
     </div>
   )
 }

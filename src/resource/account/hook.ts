@@ -2,12 +2,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/solid-query'
 import { activeTenantUuid } from '../../lib/session'
 import { TICK_QUERY_NAMES, scopedKey } from '../queryKeys'
 import {
+  changePassword,
+  changeRole,
   createCredential,
   deleteCredential,
   fetchCredentials,
   fetchTeam,
   inviteTeammate,
+  removeTeammate,
+  renameCredential,
   revokeCredential,
+  updateAccount,
+  updateWorkspace,
 } from './trans'
 
 export const useTeamQuery = () =>
@@ -36,6 +42,25 @@ export const useAccountMutations = () => {
     createCredential: useMutation(() => ({ mutationFn: createCredential, onSuccess: invalidate })),
     revokeCredential: useMutation(() => ({ mutationFn: revokeCredential, onSuccess: invalidate })),
     deleteCredential: useMutation(() => ({ mutationFn: deleteCredential, onSuccess: invalidate })),
+    removeTeammate: useMutation(() => ({ mutationFn: removeTeammate, onSuccess: invalidate })),
+    changeRole: useMutation(() => ({
+      mutationFn: (input: { uuid: string; role: string }) => changeRole(input.uuid, input.role),
+      onSuccess: invalidate,
+    })),
+    renameCredential: useMutation(() => ({
+      mutationFn: (input: { uuid: string; name: string }) => renameCredential(input.uuid, input.name),
+      onSuccess: invalidate,
+    })),
+    updateAccount: useMutation(() => ({ mutationFn: updateAccount, onSuccess: invalidate })),
+    changePassword: useMutation(() => ({
+      mutationFn: (input: { current: string; next: string }) =>
+        changePassword(input.current, input.next),
+    })),
+    updateWorkspace: useMutation(() => ({
+      mutationFn: (input: { name: string; slug: string }) =>
+        updateWorkspace(input.name, input.slug),
+      onSuccess: invalidate,
+    })),
   }
 }
 

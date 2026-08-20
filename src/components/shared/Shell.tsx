@@ -7,6 +7,7 @@ import { useTickInvalidator } from '../../resource/account/hook'
 import { ThemeToggle } from './ThemeToggle'
 import { LiveIndicator } from './LiveIndicator'
 import { Clock } from './Clock'
+import { Select } from '../ui/select'
 
 const NAV = [
   { href: '/dashboard', label: 'Overview', icon: '◫' },
@@ -105,16 +106,17 @@ export function Shell(props: { children: JSX.Element }) {
                   </button>
                 </div>
                 <Show when={current().tenants.length > 1}>
-                  <select
-                    class="mt-2 hidden h-8 w-full rounded border border-border bg-surface-1 px-1.5 text-xs text-primary xl:block"
-                    value={current().activeTenantUuid}
-                    onChange={(e) => switchTenant(e.currentTarget.value)}
-                    aria-label="Workspace"
-                  >
-                    <For each={current().tenants}>
-                      {(tenant) => <option value={tenant.uuid}>{tenant.name}</option>}
-                    </For>
-                  </select>
+                  <div class="mt-2 hidden xl:block">
+                    <Select
+                      value={current().activeTenantUuid}
+                      options={current().tenants.map((tenant) => ({
+                        value: tenant.uuid,
+                        label: tenant.name,
+                        hint: tenant.role,
+                      }))}
+                      onChange={switchTenant}
+                    />
+                  </div>
                 </Show>
               </div>
             </aside>

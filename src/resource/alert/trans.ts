@@ -11,6 +11,8 @@ export const testChannel = (uuid: string) => http.post<void>(`/alert-channels/${
 export const fetchPolicies = () => http.get<EscalationPolicy[]>('/escalation-policies')
 export const createPolicy = (body: unknown) =>
   http.post<{ uuid: string }>('/escalation-policies', body)
+export const replacePolicy = (uuid: string, body: unknown) =>
+  http.put<void>(`/escalation-policies/${uuid}`, body)
 export const deletePolicy = (uuid: string) => http.del<void>(`/escalation-policies/${uuid}`)
 
 export const fetchDeliveries = () => http.get<Delivery[]>('/deliveries')

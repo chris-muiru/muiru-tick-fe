@@ -16,19 +16,6 @@ export function Input(props: JSX.InputHTMLAttributes<HTMLInputElement>) {
   )
 }
 
-export function Select(props: JSX.SelectHTMLAttributes<HTMLSelectElement>) {
-  const [local, rest] = splitProps(props, ['class'])
-  return (
-    <select
-      class={cn(
-        'h-9 w-full rounded border border-border bg-surface-1 px-2 text-sm text-primary',
-        local.class,
-      )}
-      {...rest}
-    />
-  )
-}
-
 export function Textarea(props: JSX.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   const [local, rest] = splitProps(props, ['class'])
   return (

@@ -3,7 +3,10 @@ import { createStore, unwrap } from 'solid-js/store'
 import { Card, CardBody, CardHeader } from '../ui/card'
 import { Button } from '../ui/button'
 import { Field } from '../ui/field'
-import { Input, Select, Textarea } from '../ui/input'
+import { Input, Textarea } from '../ui/input'
+import { Select } from '../ui/select'
+import { useZodForm } from '../../lib/useZodForm'
+import { jobSchema } from '../../schemas/job'
 import { CronBuilder, type ScheduleValue } from './CronBuilder'
 import { SchedulePreview } from './SchedulePreview'
 import { KeyValueEditor, type Pair } from './KeyValueEditor'
@@ -46,6 +49,33 @@ export type JobFormValue = {
   webhookUrl: string
   webhookEvents: string[]
 }
+
+const METHODS = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'HEAD'].map((method) => ({
+  value: method,
+  label: method,
+}))
+
+const BACKOFFS = [
+  {
+    value: 'exponential',
+    label: 'Exponential, jittered',
+    hint: 'Doubles each time, with jitter so a hundred failing jobs do not retry in lockstep.',
+  },
+  { value: 'linear', label: 'Linear', hint: 'First delay × attempt number.' },
+  { value: 'fixed', label: 'Fixed', hint: 'The same wait every time.' },
+]
+
+const OVERLAP_POLICIES = [
+  { value: 'skip', label: 'Skip the new run', hint: 'Recorded as skipped, so you can see it happened.' },
+  { value: 'queue', label: 'Queue it behind', hint: 'Up to the depth you set, then recorded as queue-full.' },
+  { value: 'allow', label: 'Run both', hint: 'Only if your endpoint is safe to run in parallel.' },
+]
+
+const CATCHUP_POLICIES = [
+  { value: 'run_latest', label: 'Run the most recent missed slot', hint: 'Usually what people mean.' },
+  { value: 'skip', label: 'Run nothing, record the gap', hint: 'Every missed slot still appears in the history.' },
+  { value: 'run_all', label: 'Run everything missed, paced', hint: 'Bounded by the window and count below.' },
+]
 
 const RETRY_RULES = [
   { value: 'timeout', label: 'Timeouts' },
@@ -223,6 +253,31 @@ export function JobForm(props: {
   })
   const preview = useSchedulePreviewQuery(previewParams)
   const policies = usePoliciesQuery()
+  const validation = useZodForm(jobSchema)
+
+  // The schema sees a flat projection of the form rather than the form itself:
+  // the store holds editor state — the raw cron string, whether the secret
+  // headers were touched — that has no business being validated.
+  const schemaValues = () => ({
+    name: form.name,
+    url: form.url,
+    timezone: form.schedule.timezone,
+    intervalSeconds: form.schedule.intervalSeconds,
+    timeoutMs: form.timeoutMs,
+    maxRedirects: form.maxRedirects,
+    successStatusFrom: form.successStatusFrom,
+    successStatusTo: form.successStatusTo,
+    retryMaxAttempts: form.retryMaxAttempts,
+    retryBaseDelayMs: form.retryBaseDelayMs,
+    retryMaxDelayMs: form.retryMaxDelayMs,
+    maxQueueDepth: form.maxQueueDepth,
+    catchupWindowSeconds: form.catchupWindowSeconds,
+    catchupMaxOccurrences: form.catchupMaxOccurrences,
+    alertAfterFailures: form.alertAfterFailures,
+    autoPauseAfter: form.autoPauseAfter,
+    latenessBudgetMs: form.latenessBudgetMs,
+    webhookUrl: form.webhookUrl,
+  })
 
   const toggle = (list: string[], value: string) =>
     list.includes(value) ? list.filter((item) => item !== value) : [...list, value]
@@ -232,6 +287,9 @@ export function JobForm(props: {
       class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]"
       onSubmit={(e) => {
         e.preventDefault()
+        // Nothing is sent until every field the database would reject is fixed
+        // here, where the message can say why.
+        if (!validation.validateAll(schemaValues())) return
         props.onSubmit(unwrap(form))
       }}
     >
@@ -239,12 +297,16 @@ export function JobForm(props: {
         <Card>
           <CardHeader title="Basics" />
           <CardBody class="space-y-3">
-            <Field label="Name">
+            <Field label="Name" error={validation.errors().name}>
               <Input
-                required
                 placeholder="Nightly invoice reconciliation"
                 value={form.name}
-                onInput={(e) => setForm('name', e.currentTarget.value)}
+                aria-invalid={!!validation.errors().name}
+                onInput={(e) => {
+                  setForm('name', e.currentTarget.value)
+                  validation.clearField('name')
+                }}
+                onBlur={() => validation.validateField('name', schemaValues())}
               />
             </Field>
             <Field label="Description" hint="Optional. Shown wherever this job is listed.">
@@ -272,26 +334,34 @@ export function JobForm(props: {
               <Select
                 class="w-28 shrink-0"
                 value={form.method}
-                onChange={(e) => setForm('method', e.currentTarget.value)}
-              >
-                <For each={['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'HEAD']}>
-                  {(method) => <option value={method}>{method}</option>}
-                </For>
-              </Select>
+                options={METHODS}
+                onChange={(method) => setForm('method', method)}
+              />
               <Input
-                required
                 class="num"
                 placeholder="https://your-app.example.com/jobs/reconcile"
                 value={form.url}
                 spellcheck={false}
-                onInput={(e) => setForm('url', e.currentTarget.value)}
+                aria-invalid={!!validation.errors().url}
+                onInput={(e) => {
+                  setForm('url', e.currentTarget.value)
+                  validation.clearField('url')
+                }}
+                onBlur={() => validation.validateField('url', schemaValues())}
               />
             </div>
-            <p class="text-2xs text-muted">
-              Must be reachable from the public internet. Private and loopback addresses
-              are refused — we resolve the name first, so a hostname pointing inward is
-              blocked too.
-            </p>
+            <Show
+              when={validation.errors().url}
+              fallback={
+                <p class="text-2xs text-muted">
+                  Must be reachable from the public internet. Private and loopback
+                  addresses are refused — we resolve the name first, so a hostname
+                  pointing inward is blocked too.
+                </p>
+              }
+            >
+              <p class="text-2xs text-fail">{validation.errors().url}</p>
+            </Show>
 
             <div>
               <span class="mb-1 block text-xs font-medium text-secondary">Headers</span>
@@ -325,7 +395,7 @@ export function JobForm(props: {
                   onInput={(e) => setForm('bodyContentType', e.currentTarget.value)}
                 />
               </Field>
-              <Field label="Timeout (seconds)" hint="1–300. Covers connect, TLS and body.">
+              <Field label="Timeout (seconds)" error={validation.errors().timeoutMs} hint="1–300. Covers connect, TLS and body.">
                 <Input
                   type="number"
                   class="num"
@@ -356,7 +426,7 @@ export function JobForm(props: {
                   onInput={(e) => setForm('successStatusFrom', Number(e.currentTarget.value || 200))}
                 />
               </Field>
-              <Field label="Success to">
+              <Field label="Success to" error={validation.errors().successStatusTo}>
                 <Input
                   type="number"
                   class="num"
@@ -383,14 +453,11 @@ export function JobForm(props: {
               <Field label="Backoff">
                 <Select
                   value={form.retryBackoff}
-                  onChange={(e) => setForm('retryBackoff', e.currentTarget.value)}
-                >
-                  <option value="exponential">Exponential, jittered</option>
-                  <option value="linear">Linear</option>
-                  <option value="fixed">Fixed</option>
-                </Select>
+                  options={BACKOFFS}
+                  onChange={(value) => setForm('retryBackoff', value)}
+                />
               </Field>
-              <Field label="Max attempts" hint="Including the first. 1 means never retry.">
+              <Field label="Max attempts" error={validation.errors().retryMaxAttempts} hint="Including the first. 1 means never retry.">
                 <Input
                   type="number"
                   class="num"
@@ -409,7 +476,7 @@ export function JobForm(props: {
                   onInput={(e) => setForm('retryBaseDelayMs', Number(e.currentTarget.value || 30) * 1000)}
                 />
               </Field>
-              <Field label="Longest delay (seconds)">
+              <Field label="Longest delay (seconds)" error={validation.errors().retryMaxDelayMs}>
                 <Input
                   type="number"
                   class="num"
@@ -454,12 +521,9 @@ export function JobForm(props: {
               >
                 <Select
                   value={form.concurrencyPolicy}
-                  onChange={(e) => setForm('concurrencyPolicy', e.currentTarget.value)}
-                >
-                  <option value="skip">Skip the new run</option>
-                  <option value="queue">Queue it behind</option>
-                  <option value="allow">Run both</option>
-                </Select>
+                  options={OVERLAP_POLICIES}
+                  onChange={(value) => setForm('concurrencyPolicy', value)}
+                />
               </Field>
               <Show when={form.concurrencyPolicy === 'queue'}>
                 <Field label="Queue depth" hint="Past this, slots are recorded as queue-full.">
@@ -479,12 +543,9 @@ export function JobForm(props: {
               <Field label="After downtime">
                 <Select
                   value={form.catchupPolicy}
-                  onChange={(e) => setForm('catchupPolicy', e.currentTarget.value)}
-                >
-                  <option value="run_latest">Run the most recent missed slot</option>
-                  <option value="skip">Run nothing, record the gap</option>
-                  <option value="run_all">Run everything missed, paced</option>
-                </Select>
+                  options={CATCHUP_POLICIES}
+                  onChange={(value) => setForm('catchupPolicy', value)}
+                />
               </Field>
               <Show when={form.catchupPolicy === 'run_all'}>
                 <Field label="Catch-up window (hours)" hint="Older slots are recorded, not run.">
@@ -508,7 +569,7 @@ export function JobForm(props: {
           <CardHeader title="Alerting" />
           <CardBody class="space-y-3">
             <div class="grid gap-3 sm:grid-cols-2">
-              <Field label="Alert after consecutive failures">
+              <Field label="Alert after consecutive failures" error={validation.errors().alertAfterFailures}>
                 <Input
                   type="number"
                   class="num"
@@ -524,16 +585,19 @@ export function JobForm(props: {
               >
                 <Select
                   value={form.escalationPolicyUuid}
-                  onChange={(e) => setForm('escalationPolicyUuid', e.currentTarget.value)}
-                >
-                  <option value="">None</option>
-                  <For each={policies.data ?? []}>
-                    {(policy) => <option value={policy.uuid}>{policy.name}</option>}
-                  </For>
-                </Select>
+                  options={[
+                    { value: '', label: 'None', hint: 'An incident opens but nobody is told.' },
+                    ...(policies.data ?? []).map((policy) => ({
+                      value: policy.uuid,
+                      label: policy.name,
+                      hint: policy.steps.map((step) => step.channelName).join(' → '),
+                    })),
+                  ]}
+                  onChange={(value) => setForm('escalationPolicyUuid', value)}
+                />
               </Field>
               <Field
-                label="Warn if a run starts late by (seconds)"
+                label="Warn if a run starts late by (seconds)" error={validation.errors().latenessBudgetMs}
                 hint="Leave blank to skip. This alerts on our punctuality, not your endpoint."
               >
                 <Input
@@ -551,7 +615,7 @@ export function JobForm(props: {
                 />
               </Field>
               <Field
-                label="Pause after consecutive failures"
+                label="Pause after consecutive failures" error={validation.errors().autoPauseAfter}
                 hint="You are warned first and given 24 hours before anything is paused."
               >
                 <Input
@@ -617,10 +681,12 @@ export function JobForm(props: {
           timezone={form.schedule.timezone}
         />
 
-        <Show when={props.error}>
-          <p class="mt-3 rounded border border-fail/30 bg-fail/10 px-2.5 py-2 text-xs text-fail">
-            {props.error}
-          </p>
+        <Show when={validation.firstError() ?? props.error}>
+          {(message) => (
+            <p class="mt-3 rounded border border-fail/30 bg-fail/10 px-2.5 py-2 text-xs text-fail">
+              {message()}
+            </p>
+          )}
         </Show>
 
         <div class="mt-3 flex gap-2">
