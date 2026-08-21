@@ -256,7 +256,7 @@ function ProfileCard() {
       <CardHeader title="Your profile" />
       <CardBody>
         <form
-          class="flex items-end gap-2"
+          class="flex items-start gap-2"
           onSubmit={(e) => {
             e.preventDefault()
             if (!name().trim()) return
@@ -271,7 +271,7 @@ function ProfileCard() {
           <Field label="Name" hint={session()?.user.email}>
             <Input value={name()} onInput={(e) => setName(e.currentTarget.value)} />
           </Field>
-          <Button type="submit" loading={mutations.updateAccount.isPending}>
+          <Button class="mt-5" type="submit" loading={mutations.updateAccount.isPending}>
             {saved() ? 'Saved' : 'Save'}
           </Button>
         </form>
@@ -360,7 +360,7 @@ function WorkspaceCard() {
       <CardHeader title="Workspace" />
       <CardBody>
         <form
-          class="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+          class="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-start"
           onSubmit={(e) => {
             e.preventDefault()
             setMessage('')
@@ -380,7 +380,11 @@ function WorkspaceCard() {
           <Field label="Slug" hint="Lowercase letters, numbers and hyphens.">
             <Input class="num" value={slug()} onInput={(e) => setSlug(e.currentTarget.value)} />
           </Field>
-          <Button type="submit" loading={mutations.updateWorkspace.isPending}>
+          <Button
+            class="sm:mt-5"
+            type="submit"
+            loading={mutations.updateWorkspace.isPending}
+          >
             Save
           </Button>
         </form>
