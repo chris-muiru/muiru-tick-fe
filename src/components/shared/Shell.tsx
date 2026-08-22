@@ -134,7 +134,7 @@ export function Shell(props: { children: JSX.Element }) {
               </span>
             </header>
 
-            <main class="mx-auto min-w-0 max-w-[1500px] overflow-x-hidden px-3 pb-20 pt-4 md:pl-[4.5rem] md:pr-4 md:pb-6 xl:pl-56">
+            <main class="min-w-0 max-w-[1500px] overflow-x-hidden px-3 pb-20 pt-4 md:ml-14 md:px-4 md:pb-6 xl:ml-52">
               {props.children}
             </main>
 
@@ -169,7 +169,7 @@ function ShellSkeleton() {
   return (
     <div class="min-h-screen bg-surface-0">
       <aside class="fixed inset-y-0 left-0 hidden w-14 border-r border-border bg-surface-1 md:block xl:w-52" />
-      <main class="mx-auto max-w-[1500px] space-y-4 px-4 py-5 md:pl-[4.5rem] xl:pl-56">
+      <main class="max-w-[1500px] space-y-4 px-4 py-5 md:ml-14 xl:ml-52">
         <Skeleton class="h-7 w-40" />
         <Skeleton class="h-24 w-full" />
         <Skeleton class="h-64 w-full" />

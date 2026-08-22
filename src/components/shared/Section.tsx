@@ -1,5 +1,7 @@
-import { For, Show, type JSX } from 'solid-js'
+import { For, Show, createEffect, createMemo, createSignal, type JSX } from 'solid-js'
 import { Card, CardHeader } from '../ui/card'
+import { Button } from '../ui/button'
+import { Select } from '../ui/select'
 import { Skeleton } from '../ui/skeleton'
 
 /**
@@ -20,7 +22,22 @@ export function ListSection<T>(props: {
   children: (row: T) => JSX.Element
   footer?: JSX.Element
   skeletonRows?: number
+  pageSize?: number
+  pageSizeOptions?: number[]
 }) {
+  const [page, setPage] = createSignal(0)
+  const [pageSize, setPageSize] = createSignal(props.pageSize ?? 10)
+  const totalRows = () => (props.rows ?? []).length
+  const pageCount = createMemo(() => Math.max(1, Math.ceil(totalRows() / pageSize())))
+  const pagedRows = createMemo(() => {
+    const start = Math.min(page(), pageCount() - 1) * pageSize()
+    return (props.rows ?? []).slice(start, start + pageSize())
+  })
+
+  createEffect(() => {
+    if (page() >= pageCount()) setPage(pageCount() - 1)
+  })
+
   return (
     <section class="mb-6">
       <Card>
@@ -71,10 +88,52 @@ export function ListSection<T>(props: {
               }
             >
               <div class="divide-y divide-border">
-                <For each={props.rows}>{(row) => props.children(row)}</For>
+                <For each={pagedRows()}>{(row) => props.children(row)}</For>
               </div>
             </Show>
           </Show>
+        </Show>
+
+        <Show when={!props.error && !props.isLoading && totalRows() > pageSize()}>
+          <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-2">
+            <span class="num text-2xs text-muted">
+              {page() * pageSize() + 1}–{Math.min((page() + 1) * pageSize(), totalRows())} of{' '}
+              {totalRows().toLocaleString()}
+            </span>
+            <div class="flex items-center gap-2">
+              <Select
+                class="w-28"
+                value={String(pageSize())}
+                options={(props.pageSizeOptions ?? [5, 10, 20, 50]).map((size) => ({
+                  value: String(size),
+                  label: `${size} / page`,
+                }))}
+                onChange={(value) => {
+                  setPageSize(Number(value))
+                  setPage(0)
+                }}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page() === 0}
+                onClick={() => setPage(Math.max(0, page() - 1))}
+                aria-label={`Previous ${props.title.toLowerCase()} page`}
+              >
+                ‹
+              </Button>
+              <span class="num text-2xs text-secondary">{page() + 1}/{pageCount()}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page() >= pageCount() - 1}
+                onClick={() => setPage(Math.min(pageCount() - 1, page() + 1))}
+                aria-label={`Next ${props.title.toLowerCase()} page`}
+              >
+                ›
+              </Button>
+            </div>
+          </div>
         </Show>
 
         <Show when={props.footer}>

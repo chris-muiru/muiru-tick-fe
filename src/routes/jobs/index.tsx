@@ -1,49 +1,133 @@
 import { A } from '@solidjs/router'
-import { For, Show, createSignal, onCleanup, onMount } from 'solid-js'
+import { Show, createSignal, onCleanup, onMount } from 'solid-js'
 import { Shell } from '../../components/shared/Shell'
 import { OutcomeDot } from '../../components/shared/Outcome'
 import { RunStrip } from '../../components/shared/RunStrip'
 import { ConfirmButton } from '../../components/shared/ConfirmButton'
+import { DataTable, type DataTableColumn } from '../../components/shared/table/DataTable'
 import { Card, CardHeader } from '../../components/ui/card'
-import { Input } from '../../components/ui/input'
-import { Skeleton } from '../../components/ui/skeleton'
 import { useJobMutations, useJobsQuery } from '../../resource/job/hook'
-import { countdown, duration, percent } from '../../lib/format'
+import { countdown, percent } from '../../lib/format'
 import { cn } from '../../lib/utils'
 import type { Job } from '../../types'
 
 export default function Jobs() {
   const jobs = useJobsQuery()
   const mutations = useJobMutations()
-  const [filter, setFilter] = createSignal('')
   const [now, setNow] = createSignal(Date.now())
   onMount(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)
     onCleanup(() => clearInterval(timer))
   })
 
-  const visible = () => {
-    const needle = filter().toLowerCase().trim()
-    const all = jobs.data ?? []
-    if (!needle) return all
-    return all.filter(
-      (job) =>
-        job.name.toLowerCase().includes(needle) ||
-        job.request.url.toLowerCase().includes(needle) ||
-        job.schedule.human.toLowerCase().includes(needle),
-    )
-  }
+  const toggle = (job: Job) =>
+    job.enabled ? mutations.pause.mutate(job.uuid) : mutations.resume.mutate(job.uuid)
+
+  const columns: DataTableColumn<Job>[] = [
+    {
+      id: 'status',
+      label: '',
+      cell: (job) => (
+        <OutcomeDot
+          state={job.enabled ? 'done' : 'skipped'}
+          outcome={job.enabled ? job.last.outcome : 'expired'}
+        />
+      ),
+    },
+    {
+      id: 'job',
+      label: 'Job',
+      sortable: true,
+      sortValue: (job) => job.name,
+      cell: (job) => (
+        <div class="min-w-0">
+          <A href={`/jobs/${job.uuid}`} class="block truncate text-sm text-primary hover:text-accent">
+            {job.name}
+          </A>
+          <p class="num max-w-sm truncate text-2xs text-muted">
+            {job.request.method} {job.request.url}
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: 'schedule',
+      label: 'Schedule',
+      sortable: true,
+      sortValue: (job) => job.schedule.human,
+      class: 'max-w-52',
+      cell: (job) => <span class="block truncate text-xs text-secondary">{job.schedule.human}</span>,
+    },
+    {
+      id: 'runs',
+      label: 'Last 20 runs',
+      hideOnMobile: true,
+      cell: (job) => (
+        <span class="block w-[92px]" title="Oldest to newest">
+          <RunStrip outcomes={job.recentOutcomes} />
+        </span>
+      ),
+    },
+    {
+      id: 'next',
+      label: 'Next run',
+      numeric: true,
+      sortable: true,
+      sortValue: (job) => job.schedule.nextRunAt ?? '',
+      cell: (job) => (
+        <Show when={job.enabled} fallback={<span class="text-muted">paused</span>}>
+          <span class="text-primary">{now() ? countdown(job.schedule.nextRunAt) : ''}</span>
+        </Show>
+      ),
+    },
+    {
+      id: 'success',
+      label: '7-day',
+      numeric: true,
+      sortable: true,
+      sortValue: (job) => job.successRate7d ?? -1,
+      cell: (job) => (
+        <span
+          class={cn(
+            job.successRate7d === null
+              ? 'text-muted'
+              : job.successRate7d < 99
+                ? 'text-fail'
+                : 'text-ok',
+          )}
+          title={`${job.runs7d} runs in the last 7 days`}
+        >
+          {percent(job.successRate7d)}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      label: '',
+      cell: (job) => (
+        <div class="flex justify-end gap-1" onClick={(event) => event.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => toggle(job)}
+            disabled={mutations.pause.isPending || mutations.resume.isPending}
+            class="rounded border border-border px-2 py-1 text-2xs text-secondary transition-colors hover:bg-surface-2 hover:text-primary disabled:opacity-50"
+          >
+            {job.enabled ? 'Pause' : 'Resume'}
+          </button>
+          <ConfirmButton
+            question="Delete?"
+            pending={mutations.remove.isPending}
+            onConfirm={() => mutations.remove.mutate(job.uuid)}
+          />
+        </div>
+      ),
+    },
+  ]
 
   return (
     <Shell>
       <div class="mb-4 flex flex-wrap items-center gap-3">
         <h1 class="text-xl font-medium tracking-tight text-primary">Jobs</h1>
-        <Input
-          class="h-8 w-48 sm:w-64"
-          placeholder="Filter by name, URL or schedule"
-          value={filter()}
-          onInput={(e) => setFilter(e.currentTarget.value)}
-        />
         <A
           href="/jobs/new"
           class="ml-auto rounded bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg"
@@ -53,147 +137,50 @@ export default function Jobs() {
       </div>
 
       <Card>
-        <CardHeader title={`${visible().length} job${visible().length === 1 ? '' : 's'}`} />
-
-        <Show
-          when={!jobs.isPending}
-          fallback={
-            <div class="divide-y divide-border">
-              <For each={[0, 1, 2, 3]}>
-                {() => (
-                  <div class="flex items-center gap-3 px-3.5 py-3">
-                    <Skeleton class="h-2 w-2 rounded-full" />
-                    <Skeleton class="h-3 w-48" />
-                    <Skeleton class="ml-auto h-3 w-32" />
-                  </div>
-                )}
-              </For>
-            </div>
+        <CardHeader title={`${(jobs.data ?? []).length} job${jobs.data?.length === 1 ? '' : 's'}`} />
+        <DataTable
+          data={jobs.data ?? []}
+          columns={columns}
+          rowKey={(job) => job.uuid}
+          isLoading={jobs.isPending}
+          error={jobs.error as Error | null}
+          onRefetch={() => jobs.refetch()}
+          enableSearch
+          searchPlaceholder="Filter by name, URL or schedule…"
+          searchValue={(job) => `${job.name} ${job.request.url} ${job.schedule.human}`}
+          emptyTitle="No jobs yet"
+          emptyHint="A job is a schedule plus an HTTP endpoint. We call it on time, retry failures and record every attempt."
+          emptyAction={
+            <A href="/jobs/new" class="mt-1 rounded bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg">
+              Create the first one
+            </A>
           }
-        >
-          <Show
-            when={visible().length > 0}
-            fallback={
-              <div class="px-5 py-12 text-center">
-                <p class="text-sm font-medium text-primary">
-                  {jobs.data?.length ? 'Nothing matches that filter.' : 'No jobs yet.'}
-                </p>
-                <p class="mx-auto mt-1 max-w-sm text-xs text-secondary">
-                  A job is a schedule plus an HTTP endpoint. We call the endpoint on time,
-                  retry it when it fails, and record every attempt.
-                </p>
-                <Show when={!jobs.data?.length}>
-                  <A
-                    href="/jobs/new"
-                    class="mt-3 inline-block rounded bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg"
-                  >
-                    Create the first one
-                  </A>
-                </Show>
+          mobileCard={(job) => (
+            <div class="flex items-start gap-2.5">
+              <OutcomeDot
+                state={job.enabled ? 'done' : 'skipped'}
+                outcome={job.enabled ? job.last.outcome : 'expired'}
+              />
+              <div class="min-w-0 flex-1">
+                <A href={`/jobs/${job.uuid}`} class="block truncate text-sm font-medium text-primary hover:text-accent">
+                  {job.name}
+                </A>
+                <p class="num truncate text-2xs text-muted">{job.request.method} {job.request.url}</p>
+                <p class="mt-1 truncate text-xs text-secondary">{job.schedule.human}</p>
+                <div class="mt-2 flex items-center gap-2">
+                  <RunStrip outcomes={job.recentOutcomes} />
+                  <span class="num ml-auto text-2xs text-muted">
+                    {job.enabled ? countdown(job.schedule.nextRunAt) : 'paused'}
+                  </span>
+                </div>
+                <div class="mt-2 flex justify-end gap-1">
+                  {columns[6].cell(job)}
+                </div>
               </div>
-            }
-          >
-            {/* Header row on desktop only — on a phone the row itself carries
-                its labels rather than pretending to be a spreadsheet. */}
-            <div class="hidden items-center gap-3 border-b border-border px-3.5 py-1.5 text-2xs uppercase tracking-wide text-muted lg:flex">
-              <span class="w-2" />
-              <span class="flex-1">Job</span>
-              <span class="w-52">Schedule</span>
-              <span class="w-[92px]">Last 20 runs</span>
-              <span class="w-24">Next run</span>
-              <span class="w-20 text-right">7-day</span>
-              <span class="w-32" />
             </div>
-
-            <div class="divide-y divide-border">
-              <For each={visible()}>
-                {(job) => (
-                  <JobRow
-                    job={job}
-                    now={now()}
-                    busy={mutations.pause.isPending || mutations.resume.isPending}
-                    onToggle={() =>
-                      job.enabled
-                        ? mutations.pause.mutate(job.uuid)
-                        : mutations.resume.mutate(job.uuid)
-                    }
-                    onDelete={() => mutations.remove.mutate(job.uuid)}
-                    deleting={mutations.remove.isPending}
-                  />
-                )}
-              </For>
-            </div>
-          </Show>
-        </Show>
+          )}
+        />
       </Card>
     </Shell>
-  )
-}
-
-function JobRow(props: {
-  job: Job
-  now: number
-  busy: boolean
-  onToggle: () => void
-  onDelete: () => void
-  deleting: boolean
-}) {
-  const rate = () => props.job.successRate7d
-  return (
-    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2.5 transition-colors hover:bg-surface-2 lg:flex-nowrap">
-      <OutcomeDot
-        state={props.job.enabled ? 'done' : 'skipped'}
-        outcome={props.job.enabled ? props.job.last.outcome : 'expired'}
-      />
-
-      <div class="min-w-0 flex-1">
-        <A href={`/jobs/${props.job.uuid}`} class="block truncate text-sm text-primary hover:text-accent">
-          {props.job.name}
-        </A>
-        <p class="num truncate text-2xs text-muted">
-          {props.job.request.method} {props.job.request.url}
-        </p>
-      </div>
-
-      <span class="w-full truncate text-xs text-secondary lg:w-52">{props.job.schedule.human}</span>
-
-      {/* Twenty marks say whether this job is steady, flapping or newly broken.
-          One last-run badge cannot. */}
-      <span class="w-[92px] shrink-0" title="Oldest to newest">
-        <RunStrip outcomes={props.job.recentOutcomes} />
-      </span>
-
-      <span class="num w-24 shrink-0 text-xs">
-        <Show when={props.job.enabled} fallback={<span class="text-muted">paused</span>}>
-          <span class="text-primary">{props.now ? countdown(props.job.schedule.nextRunAt) : ''}</span>
-        </Show>
-      </span>
-
-      <span
-        class={cn(
-          'num w-20 shrink-0 text-right text-xs',
-          rate() === null ? 'text-muted' : rate()! < 99 ? 'text-fail' : 'text-ok',
-        )}
-        title={`${props.job.runs7d} runs in the last 7 days`}
-      >
-        {percent(rate())}
-      </span>
-
-      <span class="flex w-32 shrink-0 items-center justify-end gap-1">
-        <button
-          type="button"
-          onClick={props.onToggle}
-          disabled={props.busy}
-          class="rounded border border-border px-2 py-1 text-2xs text-secondary transition-colors hover:bg-surface-2 hover:text-primary disabled:opacity-50"
-        >
-          {props.job.enabled ? 'Pause' : 'Resume'}
-        </button>
-        <ConfirmButton
-          question="Delete?"
-          pending={props.deleting}
-          onConfirm={props.onDelete}
-        />
-      </span>
-    </div>
   )
 }
